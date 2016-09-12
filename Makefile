@@ -4,9 +4,9 @@ test:
 	go test ./...
 
 build:
-	go build -o bin/go-auditx cmd/go-auditx.go
+	go build -o bin/go-auditx main.go
 
 run:
-	go run cmd/go-auditx.go
+	go run main.go
 
 ci: test
