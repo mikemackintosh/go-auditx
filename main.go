@@ -111,6 +111,7 @@ func (msg *AuditMsg) parseSubject() error {
 }
 
 func main() {
+	fmt.Println("==")
 
 	fd, err := os.Open(AUDIT_PIPE)
 	if err != nil {
