@@ -4,7 +4,7 @@ test:
 	go test ./...
 
 build:
-	go build -o bin/go-auditx main.go
+	go build -o bin/go-auditx *.go
 
 run:
 	go run main.go
