@@ -9,9 +9,13 @@ import "C"
 import (
 	"bufio"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"bytes"
 )
@@ -93,20 +97,43 @@ const (
 )
 
 type Token struct {
-	Header
+	Header32
+	Header64
 }
-
-type Header struct {
+type Header32 struct {
 	Type          byte
 	RecordLength  uint32
-	Version       string
+	Version       uint16
 	EventType     uint16
 	EventModifier uint16
-	Seconds       uint64
+	UnixTimestamp uint32
+	Milliseconds  uint32
+	Timestamp     time.Time
+}
+type Header64 struct {
+	Type          byte
+	RecordLength  uint32
+	Version       uint16
+	EventType     uint16
+	EventModifier uint16
+	UnixTimestamp uint64
 	Milliseconds  uint64
+	Timestamp     time.Time
+}
+
+func init() {
+
 }
 
 func main() {
+	flag.Parse()
+
+	eventDefinitions, err := ParseEventsFile(AUDIT_EVENT_FILE)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%+v", eventDefinitions)
+
 	fmt.Println("==")
 
 	fd, err := os.Open(AUDIT_PIPE)
@@ -141,10 +168,11 @@ func main() {
 			panic(err)
 		}
 
-		header := Header{Type: eventType}
-		token := Token{header}
+		token := Token{}
 		switch eventType {
 		case AUT_HEADER32:
+			header := Header32{Type: eventType}
+			token = Token{Header32: header}
 			if err := parseHeader32(buf, &token, reclen); err != nil {
 				fmt.Printf("Header parsing error: %+s", err)
 			}
@@ -170,10 +198,8 @@ func parseMessage(recordType byte, buf *bytes.Buffer) (uint32, error) {
 		AUT_HEADER64_EX:
 
 		// Read the next few bytes of the header token
-		header := buf.Next(C.sizeof_u_int32_t)
-
 		// Get the record length
-		reclen = binary.BigEndian.Uint32(header)
+		reclen = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
 
 		return reclen, nil
 
@@ -185,12 +211,13 @@ func parseMessage(recordType byte, buf *bytes.Buffer) (uint32, error) {
 }
 
 func parseHeader32(buf *bytes.Buffer, tok *Token, reclen uint32) error {
-	tok.RecordLength = reclen
-	tok.Version = string(buf.Next(1))
-	tok.EventType = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
-	tok.EventModifier = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
-	tok.Seconds = binary.BigEndian.Uint64(buf.Next(C.sizeof_u_int64_t))
-	tok.Milliseconds = binary.BigEndian.Uint64(buf.Next(C.sizeof_u_int64_t))
+	tok.Header32.RecordLength = reclen
+	tok.Header32.Version = ByteToInt16(buf.Next(1))
+	tok.Header32.EventType = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
+	tok.Header32.EventModifier = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
+	tok.Header32.UnixTimestamp = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
+	tok.Header32.Milliseconds = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
+	tok.Header32.Timestamp = time.Unix(int64(tok.Header32.UnixTimestamp), int64(tok.Header32.Milliseconds))
 	return nil
 }
 
@@ -212,4 +239,62 @@ func ByteToInt32(array []byte) uint32 {
 		out |= uint32(b) << shift
 	}
 	return out
+}
+
+func ByteToInt16(array []byte) uint16 {
+	var out uint16
+	l := len(array)
+	for i, b := range array {
+		shift := uint16((l - i - 1) * 8)
+		out |= uint16(b) << shift
+	}
+	return out
+}
+
+type EventsDictionary map[uint16]EventDefinition
+type EventDefinition struct {
+	ID       uint16
+	Constant string
+	Name     string
+	Flag     []string
+}
+
+func ParseEventsFile(eventsFile string) (EventsDictionary, error) {
+	var ed = EventsDictionary{}
+
+	if _, err := os.Stat(eventsFile); err == nil {
+		file, err := os.Open(eventsFile)
+		if err != nil {
+			return ed, fmt.Errorf("No events file found.")
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			// trim the line from all leading whitespace first
+			line := strings.TrimLeft(scanner.Text(), " \t")
+			// line is not empty, and not starting with '#'
+			if len(line) > 0 && !strings.HasPrefix(line, "#") {
+				event := strings.SplitN(line, ":", 4)
+				if len(event) == 4 {
+					eventID, _ := strconv.ParseInt(event[0], 10, 16)
+					eid := uint16(eventID)
+					definition := EventDefinition{
+						ID:       eid,
+						Constant: event[1],
+						Name:     event[2],
+						Flag:     strings.Split(event[3], ","),
+					}
+					ed[eid] = definition
+				}
+			}
+		}
+
+		// If there was an error running scan, then return
+		if err := scanner.Err(); err != nil {
+			return ed, fmt.Errorf("Unable to read events file.")
+		}
+	}
+
+	return ed, nil
 }
