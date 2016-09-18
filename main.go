@@ -81,6 +81,11 @@ func main() {
 				if err := bsm.ParseText(buf, token); err != nil {
 					fmt.Printf("Text parsing error: %+s", err)
 				}
+
+			case bsm.AUT_RETURN32:
+				if err := bsm.ParseReturn(buf, token); err != nil {
+					fmt.Printf("Return parsing error: %+s", err)
+				}
 			}
 		}
 		fmt.Printf("%+v", token)
@@ -114,52 +119,22 @@ func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 
 		// Read the next few bytes of the header token
 		// Get the record length
-		reclen = ByteToInt32(buf.Bytes()[:sizeofUint32])
+		reclen = bsm.ByteToInt32(buf.Bytes()[:bsm.SizeofUint32])
 
 		break
 
 	case bsm.AUT_OTHER_FILE32:
-		if sec := readUint32(buf); sec < sizeofUint32 {
+		if sec := bsm.ReadUint32(buf); sec < bsm.SizeofUint32 {
 			return 0, eventType, nil
 		}
 
-		_ = readUint32(buf)
-		filenamelen := readUint16(buf)
-		reclen = uint32(sizeofChar + sizeofUint32 + sizeofUint32 + sizeofUint16 + filenamelen)
+		_ = bsm.ReadUint32(buf)
+		filenamelen := bsm.ReadUint16(buf)
+		reclen = uint32(bsm.SizeofChar + bsm.SizeofUint32 + bsm.SizeofUint32 + bsm.SizeofUint16 + filenamelen)
 		break
 	default:
 		reclen = uint32(buf.Len())
 	}
 
 	return reclen, eventType, nil
-}
-
-func ByteToInt64(array []byte) uint64 {
-	var out uint64
-	l := len(array)
-	for i, b := range array {
-		shift := uint64((l - i - 1) * 8)
-		out |= uint64(b) << shift
-	}
-	return out
-}
-
-func ByteToInt32(array []byte) uint32 {
-	var out uint32
-	l := len(array)
-	for i, b := range array {
-		shift := uint32((l - i - 1) * 8)
-		out |= uint32(b) << shift
-	}
-	return out
-}
-
-func ByteToInt16(array []byte) uint16 {
-	var out uint16
-	l := len(array)
-	for i, b := range array {
-		shift := uint16((l - i - 1) * 8)
-		out |= uint16(b) << shift
-	}
-	return out
 }

@@ -24,7 +24,7 @@ var charTest = []struct {
 
 func TestReadChar(t *testing.T) {
 	for i, tt := range charTest {
-		actual := readChar(byteBuffer, 1)
+		actual := ReadChar(byteBuffer, 1)
 		if actual[0] != tt.expected[0] {
 			t.Errorf("ReadChar(%d): expected %v, actual %v", i, tt.expected, actual)
 		}
@@ -40,7 +40,7 @@ var ntohTest = []struct {
 
 func TestReadNtoh(t *testing.T) {
 	for i, tt := range ntohTest {
-		actual := readNtoh(byteBuffer, 4)
+		actual := ReadNtoh(byteBuffer, 4)
 		if string(actual) != string(tt.expected) {
 			t.Errorf("readNtoh(%d): expected %v, actual %v", i, tt.expected, actual)
 		}
@@ -56,7 +56,7 @@ var uint16Test = []struct {
 
 func TestReadUint16(t *testing.T) {
 	for i, tt := range uint16Test {
-		actual := readUint16(byteBuffer)
+		actual := ReadUint16(byteBuffer)
 		if actual != tt.expected {
 			t.Errorf("readUint16(%d): expected %v, actual %v", i, tt.expected, actual)
 		}
@@ -72,7 +72,7 @@ var uint32Test = []struct {
 
 func TestReadUint32(t *testing.T) {
 	for i, tt := range uint32Test {
-		actual := readUint32(byteBuffer)
+		actual := ReadUint32(byteBuffer)
 		if actual != tt.expected {
 			t.Errorf("readUint32(%d): expected %v, actual %v", i, tt.expected, actual)
 		}
@@ -88,7 +88,7 @@ var uint64Test = []struct {
 
 func TestReadUint64(t *testing.T) {
 	for i, tt := range uint64Test {
-		actual := readUint64(byteBuffer)
+		actual := ReadUint64(byteBuffer)
 		if actual != tt.expected {
 			t.Errorf("readUint64(%d): expected %v, actual %v", i, tt.expected, actual)
 		}
