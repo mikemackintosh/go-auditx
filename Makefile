@@ -6,7 +6,7 @@ test:
 build:
 	go build -o bin/go-auditx *.go
 
-run:
-	go run main.go bytes.go
+run: build
+	sudo ./bin/go-auditx -d
 
 ci: test
