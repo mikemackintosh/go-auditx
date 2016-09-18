@@ -20,81 +20,7 @@ import (
 	"bytes"
 )
 
-const (
-	AUT_INVALID      = 0x00
-	AUT_OTHER_FILE32 = 0x11
-	AUT_OHEADER      = 0x12
-	AUT_TRAILER      = 0x13
-	AUT_HEADER32     = 0x14
-	AUT_HEADER32_EX  = 0x15
-	AUT_DATA         = 0x21
-	AUT_IPC          = 0x22
-	AUT_PATH         = 0x23
-	AUT_SUBJECT32    = 0x24
-	AUT_XATPATH      = 0x25
-	AUT_PROCESS32    = 0x26
-	AUT_RETURN32     = 0x27
-	AUT_TEXT         = 0x28
-	AUT_OPAQUE       = 0x29
-	AUT_IN_ADDR      = 0x2a
-	AUT_IP           = 0x2b
-	AUT_IPORT        = 0x2c
-	AUT_ARG32        = 0x2d
-	AUT_SOCKET       = 0x2e
-	AUT_SEQ          = 0x2f
-	AUT_ACL          = 0x30
-	AUT_ATTR         = 0x31
-	AUT_IPC_PERM     = 0x32
-	AUT_LABEL        = 0x33
-	AUT_GROUPS       = 0x34
-	AUT_ACE          = 0x35
-	AUT_PRIV         = 0x38
-	AUT_UPRIV        = 0x39
-	AUT_LIAISON      = 0x3a
-	AUT_NEWGROUPS    = 0x3b
-	AUT_EXEC_ARGS    = 0x3c
-	AUT_EXEC_ENV     = 0x3d
-	AUT_ATTR32       = 0x3e
-	AUT_UNAUTH       = 0x3f
-	AUT_XATOM        = 0x40
-	AUT_XOBJ         = 0x41
-	AUT_XPROTO       = 0x42
-	AUT_XSELECT      = 0x43
-	AUT_XCOLORMAP    = 0x44
-	AUT_XCURSOR      = 0x45
-	AUT_XFONT        = 0x46
-	AUT_XGC          = 0x47
-	AUT_XPIXMAP      = 0x48
-	AUT_XPROPERTY    = 0x49
-	AUT_XWINDOW      = 0x4a
-	AUT_XCLIENT      = 0x4b
-	AUT_CMD          = 0x51
-	AUT_EXIT         = 0x52
-	AUT_ZONENAME     = 0x60
-	AUT_HOST         = 0x70
-	AUT_ARG64        = 0x71
-	AUT_RETURN64     = 0x72
-	AUT_ATTR64       = 0x73
-	AUT_HEADER64     = 0x74
-	AUT_SUBJECT64    = 0x75
-	AUT_PROCESS64    = 0x77
-	AUT_OTHER_FILE64 = 0x78
-	AUT_HEADER64_EX  = 0x79
-	AUT_SUBJECT32_EX = 0x7a
-	AUT_PROCESS32_EX = 0x7b
-	AUT_SUBJECT64_EX = 0x7c
-	AUT_PROCESS64_EX = 0x7d
-	AUT_IN_ADDR_EX   = 0x7e
-	AUT_SOCKET_EX    = 0x7f
-)
-
-const (
-	AUDIT_PIPE         = "/dev/auditpipe"
-	AUDIT_EVENT_FILE   = "/etc/security/audit_event"
-	AUDIT_CLASS_FILE   = "/etc/security/audit_class"
-	AUDIT_CONTROL_FILE = "/etc/security/audit_control"
-	AUDIT_USER_FILE    = "/etc/security/audit_user"
-)
+var debug bool = false
 
 type Token struct {
 	Header32
@@ -134,8 +60,9 @@ type Header64 struct {
 	Timestamp     time.Time
 }
 
+var SizeSubject32 int = 36
+
 type Subject32 struct {
-	Type        byte
 	AuditUserID uint32
 	UserID      uint32
 	GroupID     uint32
@@ -145,12 +72,11 @@ type Subject32 struct {
 	SessionID   uint32
 	Terminal    struct {
 		PortID    uint32
-		MachineID []byte
+		MachineID [4]byte
 	}
 }
 
 type Text struct {
-	Type byte
 	Size uint16
 	Data string
 }
@@ -161,7 +87,7 @@ type Return32 struct {
 }
 
 func init() {
-
+	flag.BoolVar(&debug, "d", false, "Enable for debug")
 }
 
 func main() {
@@ -199,7 +125,6 @@ func main() {
 		var reclen uint32
 		var eventType byte
 		token := &Token{}
-		fmt.Printf("%+v", buf)
 
 		for reclen = uint32(buf.Len()); reclen > 0; reclen, eventType, _ = parseRecord(buf) {
 			switch eventType {
@@ -209,18 +134,15 @@ func main() {
 				}
 
 			case AUT_SUBJECT32:
-				token.Subject32 = Subject32{Type: eventType}
-				if err := parseSubject32(buf, token, reclen); err != nil {
-					fmt.Printf("Header parsing error: %+s", err)
+				if err := parseSubject32(buf, token); err != nil {
+					fmt.Printf("Subject parsing error: %+s", err)
 				}
+
 			case AUT_TEXT:
-				token.Text = Text{Type: eventType}
 				if err := parseText(buf, token); err != nil {
-					fmt.Printf("Header parsing error: %+s", err)
+					fmt.Printf("Text parsing error: %+s", err)
 				}
 			}
-
-			//fmt.Printf("> (%d) %+v", 1, b)
 		}
 		fmt.Printf("%+v", token)
 	}
@@ -240,7 +162,10 @@ func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 		fmt.Printf("Error: %s", err)
 	}
 
-	fmt.Printf("Found new evnet type of: %+v\n\n", eventType)
+	// Let's wet the lips
+	if debug {
+		fmt.Printf("> Found new token type of: %s (%d)\n\n", TokenTypeDictionary[eventType], eventType)
+	}
 
 	switch eventType {
 	case AUT_HEADER32,
@@ -284,19 +209,21 @@ func parseHeader32(buf *bytes.Buffer, tok *Token) error {
 	return nil
 }
 
-func parseSubject32(buf *bytes.Buffer, tok *Token, reclen uint32) error {
-	tok.Subject32.AuditUserID = readUint32(buf)
-	tok.Subject32.UserID = readUint32(buf)
-	tok.Subject32.GroupID = readUint32(buf)
-	tok.Subject32.RealUID = readUint32(buf)
-	tok.Subject32.RealGID = readUint32(buf)
-	tok.Subject32.ProcessID = readUint32(buf)
-	tok.Subject32.SessionID = readUint32(buf)
-	tok.Subject32.Terminal.PortID = readUint32(buf)
-	tok.Subject32.Terminal.MachineID = readNtoh(buf, C.sizeof_u_int32_t)
+// parseSubject32 parses the user/actor subject
+func parseSubject32(buf *bytes.Buffer, tok *Token) error {
+	subject := Subject32{}
+	data := readNextBytes(buf, SizeSubject32)
+	buffer := bytes.NewBuffer(data)
+	err := binary.Read(buffer, binary.BigEndian, &subject)
+	if err != nil {
+		return err
+	}
+	// Set the header in the token
+	tok.Subject32 = subject
 	return nil
 }
 
+// parseText parses the text object, can be variable length
 func parseText(buf *bytes.Buffer, tok *Token) error {
 	tok.Text.Size = readUint16(buf)
 	tok.Text.Data = string(buf.Next(int(tok.Text.Size)))
