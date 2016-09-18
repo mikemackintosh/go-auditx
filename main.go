@@ -102,15 +102,25 @@ type Token struct {
 	Subject32
 	Text
 }
+
+// SizeHeader32 is the byte size of the header
+var SizeHeader32 int = 17
+
+// Header32 contains standard audit header tokens
 type Header32 struct {
-	Type          byte
 	RecordLength  uint32
-	Version       uint16
+	Version       byte
 	EventType     uint16
 	EventModifier uint16
 	UnixTimestamp uint32
 	Milliseconds  uint32
-	Timestamp     time.Time
+}
+
+// Time generates a time.Time from the unix timestamp
+func (h Header32) Time() time.Time {
+	seconds := int64(h.UnixTimestamp)
+	milliseconds := int64(h.Milliseconds)
+	return time.Unix(seconds, milliseconds)
 }
 
 type Header64 struct {
@@ -145,6 +155,11 @@ type Text struct {
 	Data string
 }
 
+type Return32 struct {
+	Status byte
+	Value  uint32
+}
+
 func init() {
 
 }
@@ -152,11 +167,10 @@ func init() {
 func main() {
 	flag.Parse()
 
-	eventDefinitions, err := ParseEventsFile(AUDIT_EVENT_FILE)
+	/*eventDefinitions, err := ParseEventsFile(AUDIT_EVENT_FILE)
 	if err != nil {
 		panic(err)
-	}
-	fmt.Printf("%+v", eventDefinitions)
+	}*/
 
 	fmt.Println("==")
 
@@ -169,6 +183,7 @@ func main() {
 	//stat, err := fd.Stat()
 	scanner := bufio.NewScanner(fd)
 
+	// We use this to identify the last of the audit record
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if data[len(data)-5] == 5 {
 			return len(data), data, nil
@@ -184,14 +199,15 @@ func main() {
 		var reclen uint32
 		var eventType byte
 		token := &Token{}
+		fmt.Printf("%+v", buf)
 
 		for reclen = uint32(buf.Len()); reclen > 0; reclen, eventType, _ = parseRecord(buf) {
 			switch eventType {
 			case AUT_HEADER32:
-				token.Header32 = Header32{Type: eventType}
-				if err := parseHeader32(buf, token, reclen); err != nil {
+				if err := parseHeader32(buf, token); err != nil {
 					fmt.Printf("Header parsing error: %+s", err)
 				}
+
 			case AUT_SUBJECT32:
 				token.Subject32 = Subject32{Type: eventType}
 				if err := parseSubject32(buf, token, reclen); err != nil {
@@ -215,10 +231,6 @@ func main() {
 	}
 }
 
-const suint32 = C.sizeof_u_int32_t
-const suint16 = C.sizeof_u_int16_t
-const schar = 1
-
 func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 	var reclen uint32
 
@@ -238,18 +250,18 @@ func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 
 		// Read the next few bytes of the header token
 		// Get the record length
-		reclen = binary.BigEndian.Uint32(buf.Next(suint32))
+		reclen = ByteToInt32(buf.Bytes()[:sizeofUint32])
 
 		break
 
 	case AUT_OTHER_FILE32:
-		if sec := binary.BigEndian.Uint32(buf.Next(suint32)); sec < suint32 {
+		if sec := readUint32(buf); sec < sizeofUint32 {
 			return 0, eventType, nil
 		}
 
-		_ = binary.BigEndian.Uint32(buf.Next(suint32))
-		filenamelen := binary.BigEndian.Uint16(buf.Next(suint16))
-		reclen = uint32(schar + suint32 + suint32 + suint16 + filenamelen)
+		_ = readUint32(buf)
+		filenamelen := readUint16(buf)
+		reclen = uint32(sizeofChar + sizeofUint32 + sizeofUint32 + sizeofUint16 + filenamelen)
 		break
 	default:
 		reclen = uint32(buf.Len())
@@ -258,32 +270,35 @@ func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 	return reclen, eventType, nil
 }
 
-func parseHeader32(buf *bytes.Buffer, tok *Token, reclen uint32) error {
-	tok.Header32.RecordLength = reclen
-	tok.Header32.Version = ByteToInt16(buf.Next(1))
-	tok.Header32.EventType = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
-	tok.Header32.EventModifier = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
-	tok.Header32.UnixTimestamp = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Header32.Milliseconds = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Header32.Timestamp = time.Unix(int64(tok.Header32.UnixTimestamp), int64(tok.Header32.Milliseconds))
+// parseHeader32
+func parseHeader32(buf *bytes.Buffer, tok *Token) error {
+	h := Header32{}
+	data := readNextBytes(buf, SizeHeader32)
+	buffer := bytes.NewBuffer(data)
+	err := binary.Read(buffer, binary.BigEndian, &h)
+	if err != nil {
+		return err
+	}
+	// Set the header in the token
+	tok.Header32 = h
 	return nil
 }
 
 func parseSubject32(buf *bytes.Buffer, tok *Token, reclen uint32) error {
-	tok.Subject32.AuditUserID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.UserID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.GroupID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.RealUID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.RealGID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.ProcessID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.SessionID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.Terminal.PortID = binary.BigEndian.Uint32(buf.Next(C.sizeof_u_int32_t))
-	tok.Subject32.Terminal.MachineID = buf.Next(C.sizeof_u_int32_t)
+	tok.Subject32.AuditUserID = readUint32(buf)
+	tok.Subject32.UserID = readUint32(buf)
+	tok.Subject32.GroupID = readUint32(buf)
+	tok.Subject32.RealUID = readUint32(buf)
+	tok.Subject32.RealGID = readUint32(buf)
+	tok.Subject32.ProcessID = readUint32(buf)
+	tok.Subject32.SessionID = readUint32(buf)
+	tok.Subject32.Terminal.PortID = readUint32(buf)
+	tok.Subject32.Terminal.MachineID = readNtoh(buf, C.sizeof_u_int32_t)
 	return nil
 }
 
 func parseText(buf *bytes.Buffer, tok *Token) error {
-	tok.Text.Size = binary.BigEndian.Uint16(buf.Next(C.sizeof_u_int16_t))
+	tok.Text.Size = readUint16(buf)
 	tok.Text.Data = string(buf.Next(int(tok.Text.Size)))
 	return nil
 }
