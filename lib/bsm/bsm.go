@@ -1,5 +1,6 @@
 package bsm
 
+// TokenTypeDictionary maps bytecode to event token type
 var TokenTypeDictionary = map[byte]string{
 	0x00: "AUT_INVALID",
 	0x11: "AUT_OTHER_FILE32",
@@ -137,9 +138,18 @@ const (
 )
 
 const (
-	AUDIT_PIPE         = "/dev/auditpipe"
-	AUDIT_EVENT_FILE   = "/etc/security/audit_event"
-	AUDIT_CLASS_FILE   = "/etc/security/audit_class"
+	// AUDIT_PIPE is the path of the audit logs
+	AUDIT_PIPE = "/dev/auditpipe"
+
+	// AUDIT_EVENT_FILE is the file which contains mappings of eventid's to type
+	AUDIT_EVENT_FILE = "/etc/security/audit_event"
+
+	// AUDIT_CLASS_FILE maps flags to events
+	AUDIT_CLASS_FILE = "/etc/security/audit_class"
+
+	// AUDIT_CONTROL_FILE manages the configuration of auditd
 	AUDIT_CONTROL_FILE = "/etc/security/audit_control"
-	AUDIT_USER_FILE    = "/etc/security/audit_user"
+
+	//AUDIT_USER_FILE contains a list of user flag mappings
+	AUDIT_USER_FILE = "/etc/security/audit_user"
 )
