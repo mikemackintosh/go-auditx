@@ -218,7 +218,7 @@ func parseSubject32(buf *bytes.Buffer, tok *Token) error {
 	if err != nil {
 		return err
 	}
-	// Set the header in the token
+	// Set the subject in the token
 	tok.Subject32 = subject
 	return nil
 }

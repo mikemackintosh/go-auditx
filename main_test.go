@@ -45,11 +45,14 @@ var subject32Test = []struct {
 		GroupID:     0,
 		RealUID:     0,
 		RealGID:     0,
-		ProcessID:   16119,
+		ProcessID:   14696,
 		SessionID:   100006,
-		Terminal: {
-			PortID:    115895,
-			MachineID: []byte{0, 0, 0, 0},
+		Terminal: struct {
+			PortID    uint32
+			MachineID [4]byte
+		}{
+			PortID:    114472,
+			MachineID: [4]byte{0, 0, 0, 0},
 		},
 	}},
 }
@@ -57,7 +60,7 @@ var subject32Test = []struct {
 func TestParseSubject32(t *testing.T) {
 	for i, tt := range subject32Test {
 		token := &Token{}
-		if err := parseHeader32(tt.byteBuffer, token); err != nil {
+		if err := parseSubject32(tt.byteBuffer, token); err != nil {
 			t.Fatalf("parseSubject32(%d): failed parsing header", i)
 		}
 		if token.Subject32 != tt.expected {
