@@ -20,11 +20,6 @@ import (
 
 var debug bool = false
 
-type Return32 struct {
-	Status byte
-	Value  uint32
-}
-
 func init() {
 	flag.BoolVar(&debug, "d", false, "Enable for debug")
 }
@@ -86,6 +81,11 @@ func main() {
 				if err := bsm.ParseReturn(buf, token); err != nil {
 					fmt.Printf("Return parsing error: %+s", err)
 				}
+
+			case bsm.AUT_TRAILER:
+				if err := bsm.ParseTrailer(buf, token); err != nil {
+					fmt.Printf("Trailer parsing error: %+s", err)
+				}
 			}
 		}
 		fmt.Printf("%+v", token)
@@ -99,11 +99,16 @@ func main() {
 
 func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 	var reclen uint32
+	var eventType byte
+
+	if buf.Len() == 0 {
+		return 0, eventType, fmt.Errorf("Waiting for event record.")
+	}
 
 	// Grab the first byte, determine the type
 	eventType, err := buf.ReadByte()
 	if err != nil {
-		fmt.Printf("Error: %s", err)
+		fmt.Printf("> Error: %s", err)
 	}
 
 	// Let's wet the lips

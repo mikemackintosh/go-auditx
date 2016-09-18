@@ -5,4 +5,5 @@ type Token struct {
 	Subject
 	Text
 	Return
+	Trailer
 }
