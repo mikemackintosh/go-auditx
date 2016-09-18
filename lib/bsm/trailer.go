@@ -10,8 +10,8 @@ var SizeTrailer int = 6
 
 // Trailer contains standard audit trailer tokens
 type Trailer struct {
-	Magic uint16
-	Count uint32
+	Magic uint16 `json:"magic" xml:"trailer>magic"`
+	Count uint32 `json:"count" xml:"trailer>count"`
 }
 
 // ParseTrailer parses trailer tokens

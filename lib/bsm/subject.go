@@ -12,17 +12,17 @@ type Subject struct {
 }
 
 type Subject32 struct {
-	AuditUserID uint32
-	UserID      uint32
-	GroupID     uint32
-	RealUID     uint32
-	RealGID     uint32
-	ProcessID   uint32
-	SessionID   uint32
+	AuditUserID uint32 `json:"audituid" xml:"subject>audituid"`
+	UserID      uint32 `json:"uid" xml:"subject>uid"`
+	GroupID     uint32 `json:"gid" xml:"subject>gid"`
+	RealUID     uint32 `json:"ruid" xml:"subject>ruid"`
+	RealGID     uint32 `json:"rgid" xml:"subject>rgid"`
+	ProcessID   uint32 `json:"pid" xml:"subject>pid"`
+	SessionID   uint32 `json:"sessionid" xml:"subject>sessionid"`
 	Terminal    struct {
-		PortID    uint32
-		MachineID [4]byte
-	}
+		PortID    uint32  `json:"port" xml:"port"`
+		MachineID [4]byte `json:"machine" xml:"machine"`
+	} `json:"terminal" xml:"subject>terminal"`
 }
 
 // ParseSubject32 parses the user/actor subject

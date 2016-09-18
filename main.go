@@ -8,6 +8,8 @@ import "C"
 
 import (
 	"bufio"
+	"encoding/json"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"log"
@@ -88,7 +90,18 @@ func main() {
 				}
 			}
 		}
-		fmt.Printf("%+v", token)
+
+		encoded, err := json.MarshalIndent(token, "", "  ")
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		fmt.Printf("%s\n", encoded)
+
+		e2, err := xml.MarshalIndent(token, "", "  ")
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		fmt.Printf("%s\n", e2)
 	}
 
 	if err := scanner.Err(); err != nil {

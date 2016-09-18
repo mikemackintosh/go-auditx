@@ -8,8 +8,8 @@ import (
 var SizeReturn int = 5
 
 type Return struct {
-	Status   byte
-	Response uint32
+	Status   byte   `json:"status" xml:"return>status"`
+	Response uint32 `json:"response" xml:"return>response"`
 }
 
 // ParseReturn parses the return  object, can be variable length

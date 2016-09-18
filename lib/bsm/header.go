@@ -11,18 +11,18 @@ var SizeHeader32 int = 17
 
 // Header contains standard audit header tokens
 type Header struct {
-	Header32  `json:"header" xml:"header"`
-	EventName string    `json:"name" xml:"name"`
-	Timestamp time.Time `json:"timestamp" xml:"timestamp"`
+	Header32
+	EventName string    `json:"name" xml:"header>name"`
+	Timestamp time.Time `json:"timestamp" xml:"header>timestamp"`
 }
 
 type Header32 struct {
-	RecordLength  uint32 `json:"len" xml:"len"`
-	Version       byte   `json:"version" xml:"version"`
-	EventType     uint16 `json:"type" xml:"type"`
-	EventModifier uint16 `json:"modifier" xml:"modifier"`
-	UnixTimestamp uint32 `json:"unixtime" xml:"unixtime"`
-	Milliseconds  uint32 `json:"milliseconds" xml:"milliseconds"`
+	RecordLength  uint32 `json:"len" xml:"header>len"`
+	Version       byte   `json:"version" xml:"header>version"`
+	EventType     uint16 `json:"type" xml:"header>type"`
+	EventModifier uint16 `json:"modifier" xml:"header>modifier"`
+	UnixTimestamp uint32 `json:"unixtime" xml:"header>unixtime"`
+	Milliseconds  uint32 `json:"milliseconds" xml:"header>milliseconds"`
 }
 
 // Timestamp generates a time.Time from the unix timestamp
