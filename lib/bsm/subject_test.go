@@ -19,8 +19,8 @@ var subject32Test = []struct {
 		ProcessID:   14696,
 		SessionID:   100006,
 		Terminal: struct {
-			PortID    uint32
-			MachineID [4]byte
+			PortID    uint32  `json:"port" xml:"port"`
+			MachineID [4]byte `json:"machine" xml:"machine"`
 		}{
 			PortID:    114472,
 			MachineID: [4]byte{0, 0, 0, 0},
