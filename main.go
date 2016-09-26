@@ -9,21 +9,19 @@ import "C"
 import (
 	"bufio"
 	"encoding/json"
-	"encoding/xml"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/mikemackintosh/go-auditx/lib/bsm"
+	"github.com/mikemackintosh/go-auditx/lib/config"
 
 	"bytes"
 )
 
-var debug bool = false
-
 func init() {
-	flag.BoolVar(&debug, "d", false, "Enable for debug")
+	flag.BoolVar(&config.Debug, "d", false, "Enable for debug")
 }
 
 func main() {
@@ -53,7 +51,10 @@ func main() {
 		return 0, data, bufio.ErrFinalToken
 	})
 
-	fmt.Println("Waiting")
+	if config.Debug {
+		fmt.Println("Waiting")
+	}
+
 	for scanner.Scan() {
 		// Read the scanner into a byte.Buffer
 		buf := bytes.NewBuffer(scanner.Bytes())
@@ -69,9 +70,27 @@ func main() {
 					fmt.Printf("Header parsing error: %+s", err)
 				}
 
-			case bsm.AUT_SUBJECT32:
+			case
+				bsm.AUT_SUBJECT32_EX,
+				bsm.AUT_SUBJECT32:
 				if err := bsm.ParseSubject32(buf, token); err != nil {
 					fmt.Printf("Subject parsing error: %+s", err)
+				}
+
+			case bsm.AUT_ARG32:
+				if err := bsm.ParseArg32(buf, token); err != nil {
+					fmt.Printf("Arg32 parsing error: %+s", err)
+				}
+
+			case bsm.AUT_ARG64:
+				if err := bsm.ParseArg64(buf, token); err != nil {
+					fmt.Printf("Arg64 parsing error: %+s", err)
+				}
+
+			case bsm.AUT_SOCKET_EX,
+				bsm.AUT_SOCKET:
+				if err := bsm.ParseSocket(buf, token); err != nil {
+					fmt.Printf("Socket parsing error: %+s", err)
 				}
 
 			case bsm.AUT_TEXT:
@@ -97,11 +116,11 @@ func main() {
 		}
 		fmt.Printf("%s\n", encoded)
 
-		e2, err := xml.MarshalIndent(token, "", "  ")
+		/*e2, err := xml.MarshalIndent(token, "", "  ")
 		if err != nil {
 			fmt.Println("error:", err)
 		}
-		fmt.Printf("%s\n", e2)
+		fmt.Printf("%s\n", e2)*/
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -125,7 +144,7 @@ func parseRecord(buf *bytes.Buffer) (uint32, byte, error) {
 	}
 
 	// Let's wet the lips
-	if debug {
+	if config.Debug {
 		fmt.Printf("> Found new token type of: %s (%d)\n", bsm.TokenTypeDictionary[eventType], eventType)
 	}
 
