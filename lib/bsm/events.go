@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var EventTypes = ParseEvents(AUDIT_EVENT_FILE)
+var EventTypes EventsDictionary
 
 type EventsDictionary map[uint16]EventDefinition
 type EventDefinition struct {
@@ -16,6 +16,10 @@ type EventDefinition struct {
 	Constant string
 	Name     string
 	Flag     []string
+}
+
+func init() {
+	EventTypes = ParseEvents(eventsFile)
 }
 
 var eventsFile = `

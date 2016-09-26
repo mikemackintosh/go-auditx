@@ -8,9 +8,8 @@ import (
 )
 
 var (
-	// EnvironmentFile is the environment config file for supplying docker host
-	// and AWS credentials to the specific modules
-	EnvironmentFile string
+	// Debug configures the default debug value
+	Debug bool
 )
 
 // ConfigureEnvironment takes a configuration file and loads
