@@ -71,10 +71,15 @@ func main() {
 				}
 
 			case
-				bsm.AUT_SUBJECT32_EX,
+				bsm.AUT_SUBJECT32_EX:
+				if err := bsm.ParseSubject32ex(buf, token); err != nil {
+					fmt.Printf("Subject32ex parsing error: %+s", err)
+				}
+
+			case
 				bsm.AUT_SUBJECT32:
 				if err := bsm.ParseSubject32(buf, token); err != nil {
-					fmt.Printf("Subject parsing error: %+s", err)
+					fmt.Printf("Subject32 parsing error: %+s", err)
 				}
 
 			case bsm.AUT_ARG32:

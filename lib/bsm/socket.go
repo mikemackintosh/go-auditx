@@ -11,13 +11,13 @@ import (
 var SizeofSocket int = 18
 
 type Socket struct {
-	Domain        uint16 `json:"sock_domain" xml:"socket>sock_domain"`
-	SocketType    uint16 `json:"sock_type" xml:"socket>sock_type"`
-	AddressType   uint16 `json:"addr_type" xml:"socket>addr_type"`
-	LocalPort     uint16 `json:"local_port" xml:"socket>local_port"`
-	LocalAddress  uint16 `json:"local_address" xml:"socket>local_address"`
-	RemotePort    uint16 `json:"report_port" xml:"socket>report_port"`
-	RemoteAddress uint16 `json:"remote_address" xml:"socket>remote_address"`
+	Domain        uint16 `json:"sock_domain,omitempty" xml:"socket>sock_domain"`
+	SocketType    uint16 `json:"sock_type,omitempty" xml:"socket>sock_type"`
+	AddressType   uint16 `json:"addr_type,omitempty" xml:"socket>addr_type"`
+	LocalPort     uint16 `json:"local_port,omitempty" xml:"socket>local_port"`
+	LocalAddress  uint16 `json:"local_address,omitempty" xml:"socket>local_address"`
+	RemotePort    uint16 `json:"report_port,omitempty" xml:"socket>report_port"`
+	RemoteAddress uint16 `json:"remote_address,omitempty" xml:"socket>remote_address"`
 }
 
 // ParseSocket parses the socket object, can be variable length
