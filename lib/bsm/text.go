@@ -2,7 +2,11 @@ package bsm
 
 import (
 	"bytes"
+	"encoding/binary"
+	"fmt"
 	"strings"
+
+	"github.com/mikemackintosh/go-auditx/lib/config"
 )
 
 type Text struct {
@@ -14,7 +18,15 @@ type Text struct {
 func ParseText(buf *bytes.Buffer, tok *Token) error {
 	text := Text{}
 	text.Length = ReadUint16(buf)
-	text.Data = strings.TrimSuffix(string(buf.Next(int(text.Length))), "\u0000")
+	textBytes := buf.Next(int(text.Length))
+
+	text.Data = strings.TrimSuffix(string(textBytes), "\\u0000")
+
+	if config.Debug {
+		b := make([]byte, 2)
+		binary.LittleEndian.PutUint16(b, text.Length)
+		fmt.Printf("> Bytes: %v %v", b, textBytes)
+	}
 
 	tok.Text = append(tok.Text, text)
 	return nil
