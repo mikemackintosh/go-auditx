@@ -92,6 +92,11 @@ func main() {
 					fmt.Printf("Arg64 parsing error: %+s", err)
 				}
 
+			case bsm.AUT_PATH:
+				if err := bsm.ParsePath(buf, token); err != nil {
+					fmt.Printf("Path parsing error: %+s", err)
+				}
+
 			case bsm.AUT_SOCKET_EX,
 				bsm.AUT_SOCKET:
 				if err := bsm.ParseSocket(buf, token); err != nil {
@@ -112,6 +117,7 @@ func main() {
 				if err := bsm.ParseTrailer(buf, token); err != nil {
 					fmt.Printf("Trailer parsing error: %+s", err)
 				}
+				break
 			}
 		}
 
